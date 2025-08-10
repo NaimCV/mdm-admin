@@ -1,0 +1,6 @@
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Cloudflare Images Configuration
+NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_ID=0b2f6328acc0b72b183dd4c8ca85038c
+NEXT_PUBLIC_CLOUDFLARE_API_TOKEN=1aaIMrrkLZzraqLSown9ej7gLw8QAtEx
+NEXT_PUBLIC_CLOUDFLARE_DELIVERY_URL=https://imagedelivery.net/RVD8Hi-5w-BqE-vPVWqcaw 
