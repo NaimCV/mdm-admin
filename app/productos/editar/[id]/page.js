@@ -8,6 +8,7 @@ import Notification from '../../../components/Notification';
 import ImageUpload from '../../../components/ImageUpload';
 import BackendImageUpload from '../../../components/BackendImageUpload';
 import TipTapEditor from '../../../components/TipTapEditor';
+import ProductOptionsManager from '../../../components/ProductOptionsManager';
 import { 
   ArrowLeftOutlined, 
   SaveOutlined, 
@@ -534,6 +535,17 @@ export default function EditarProducto() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Opciones del Producto */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Opciones del Producto</h2>
+            <ProductOptionsManager 
+              productId={params.id}
+              onOptionsChange={(options) => {
+                console.log('Opciones actualizadas:', options);
+              }}
+            />
           </div>
 
           {/* Galería de Imágenes */}
