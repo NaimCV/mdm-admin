@@ -96,12 +96,18 @@ export default function DetallePedido() {
         throw new Error(response.detail || 'Error al procesar el reembolso');
       }
       
-      const result = response;
+      const result = await response;
       
       // Recargar el pedido para obtener la información actualizada
       await loadOrder();
       
-      showSuccess(`Reembolso procesado exitosamente. ID: ${result.refund_id}`);
+      // Mostrar mensaje mejorado según el tipo de reembolso
+      if (result.is_full_refund) {
+        showSuccess(`✅ Reembolso completo procesado. El pedido ha sido cancelado. ID: ${result.refund_id}`);
+      } else {
+        showSuccess(`💡 Reembolso parcial de €${result.amount} procesado. El pedido se mantiene activo. ID: ${result.refund_id}`);
+      }
+      
       setShowPartialRefund(false);
       setPartialRefundAmount('');
       setRefundReason('');
@@ -326,24 +332,6 @@ export default function DetallePedido() {
         </div>
 
         {/* Información de Pago y Reembolso */}
-        {/* Debug info */}
-        <div className="mt-6">
-          <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Debug - Información de Pago</h2>
-            <div className="bg-gray-100 p-4 rounded text-sm font-mono">
-              <p>payment_method: "{order.payment_method}"</p>
-              <p>stripe_payment_intent_id: "{order.stripe_payment_intent_id || 'null'}"</p>
-              <p>payment_status: "{order.payment_status}"</p>
-              <p>refund_status: "{order.refund_status}"</p>
-              <p>order.status: "{order.status}"</p>
-              <p>Condición 1 (payment_method === 'card'): {order.payment_method === 'card' ? 'true' : 'false'}</p>
-              <p>Condición 2 (stripe_payment_intent_id existe): {order.stripe_payment_intent_id ? 'true' : 'false'}</p>
-              <p>Condición 3 (payment_status === 'succeeded'): {order.payment_status === 'succeeded' ? 'true' : 'false'}</p>
-              <p>Condición 4 (refund_status === 'none' || status === 'cancelado'): {(order.refund_status === 'none' || order.status === 'cancelado') ? 'true' : 'false'}</p>
-            </div>
-          </div>
-        </div>
-
         {/* Mostrar información de pago si existe algún método de pago */}
         {(order.payment_method || order.stripe_payment_intent_id) && (
           <div className="mt-6">
