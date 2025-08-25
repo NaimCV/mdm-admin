@@ -14,6 +14,9 @@ export default function DetallePedido() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [showPartialRefund, setShowPartialRefund] = useState(false);
+  const [partialRefundAmount, setPartialRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
   
   const { notifications, showSuccess, showError, removeNotification } = useNotification();
 
@@ -66,6 +69,64 @@ export default function DetallePedido() {
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleRefund = async (amount, reason = 'Solicitud del cliente') => {
+    try {
+      setUpdating(true);
+      
+      const refundData = {
+        order_id: order.id,
+        refund_amount: amount,
+        refund_reason: reason
+      };
+      
+      // Llamar a la API de reembolso
+      const response = await fetch('/api/payments/refund', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify(refundData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al procesar el reembolso');
+      }
+      
+      const result = await response.json();
+      
+      // Recargar el pedido para obtener la información actualizada
+      await loadOrder();
+      
+      showSuccess(`Reembolso procesado exitosamente. ID: ${result.refund_id}`);
+      setShowPartialRefund(false);
+      setPartialRefundAmount('');
+      setRefundReason('');
+      
+    } catch (error) {
+      console.error('Error procesando reembolso:', error);
+      showError(error.message || 'Error al procesar el reembolso');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handlePartialRefund = async () => {
+    const amount = parseFloat(partialRefundAmount);
+    if (!amount || amount <= 0 || amount > order.total_amount) {
+      showError('Por favor ingresa una cantidad válida para el reembolso');
+      return;
+    }
+    
+    if (!refundReason.trim()) {
+      showError('Por favor ingresa un motivo para el reembolso');
+      return;
+    }
+    
+    await handleRefund(amount, refundReason.trim());
   };
 
   const formatDate = (dateString) => {
@@ -256,6 +317,134 @@ export default function DetallePedido() {
           </div>
         </div>
 
+        {/* Información de Pago y Reembolso */}
+        {/* Debug info */}
+        <div className="mt-6">
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Debug - Información de Pago</h2>
+            <div className="bg-gray-100 p-4 rounded text-sm font-mono">
+              <p>payment_method: "{order.payment_method}"</p>
+              <p>stripe_payment_intent_id: "{order.stripe_payment_intent_id || 'null'}"</p>
+              <p>payment_status: "{order.payment_status}"</p>
+              <p>refund_status: "{order.refund_status}"</p>
+              <p>order.status: "{order.status}"</p>
+              <p>Condición 1 (payment_method === 'card'): {order.payment_method === 'card' ? 'true' : 'false'}</p>
+              <p>Condición 2 (stripe_payment_intent_id existe): {order.stripe_payment_intent_id ? 'true' : 'false'}</p>
+              <p>Condición 3 (payment_status === 'succeeded'): {order.payment_status === 'succeeded' ? 'true' : 'false'}</p>
+              <p>Condición 4 (refund_status === 'none' || status === 'cancelado'): {(order.refund_status === 'none' || order.status === 'cancelado') ? 'true' : 'false'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Mostrar información de pago si existe algún método de pago */}
+        {(order.payment_method || order.stripe_payment_intent_id) && (
+          <div className="mt-6">
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Información de Pago</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+                  <p className="mt-1 text-sm text-gray-900">Tarjeta (Stripe)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Estado del Pago</label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      order.payment_status === 'succeeded' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {order.payment_status === 'succeeded' ? 'Pagado' : 'Pendiente'}
+                    </span>
+                  </p>
+                </div>
+                {order.stripe_payment_intent_id && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">ID de Pago Stripe</label>
+                    <p className="mt-1 text-sm text-gray-900 font-mono">{order.stripe_payment_intent_id}</p>
+                  </div>
+                )}
+                {order.refund_status && order.refund_status !== 'none' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Estado del Reembolso</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        order.refund_status === 'completed' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {order.refund_status === 'completed' ? 'Completado' : 'En Proceso'}
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Opciones de Reembolso - Mostrar siempre que el pedido esté cancelado */}
+        {(order.status === 'cancelado' || order.payment_method === 'card') && 
+         (order.refund_status === 'none' || order.refund_status === null || order.refund_status === '') && (
+          <div className="mt-6">
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Procesar Reembolso</h2>
+              
+              {/* Mostrar mensaje diferente según el estado */}
+              {order.status === 'cancelado' ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-blue-800">Pedido Cancelado</h3>
+                      <div className="mt-2 text-sm text-blue-700">
+                        <p>• Este pedido está cancelado y requiere reembolso</p>
+                        <p>• El reembolso se procesará automáticamente a la tarjeta del cliente</p>
+                        <p>• Se enviará un email de confirmación al cliente</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-yellow-800">Pedido Pagado con Tarjeta</h3>
+                      <div className="mt-2 text-sm text-yellow-700">
+                        <p>• Este pedido fue pagado con tarjeta y puede ser reembolsado</p>
+                        <p>• El reembolso se procesará automáticamente a la tarjeta del cliente</p>
+                        <p>• El estado del pedido cambiará a "Cancelado"</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleRefund(order.total_amount)}
+                  disabled={updating}
+                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                >
+                  {updating ? 'Procesando...' : `Reembolsar €${order.total_amount.toFixed(2)}`}
+                </button>
+                <button
+                  onClick={() => setShowPartialRefund(true)}
+                  disabled={updating}
+                  className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                >
+                  Reembolso Parcial
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Acciones Adicionales */}
         <div className={styles.actionsContainer}>
           <div className={styles.card}>
@@ -292,6 +481,66 @@ export default function DetallePedido() {
           </div>
         </div>
       </main>
+
+      {/* Modal de Reembolso Parcial */}
+      {showPartialRefund && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Reembolso Parcial</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cantidad a Reembolsar (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={order.total_amount}
+                  value={partialRefundAmount}
+                  onChange={(e) => setPartialRefundAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={`Máximo: €${order.total_amount.toFixed(2)}`}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Motivo del Reembolso
+                </label>
+                <textarea
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe el motivo del reembolso parcial..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowPartialRefund(false);
+                  setPartialRefundAmount('');
+                  setRefundReason('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePartialRefund}
+                disabled={updating || !partialRefundAmount || !refundReason.trim()}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:bg-orange-300 transition-colors duration-200"
+              >
+                {updating ? 'Procesando...' : 'Confirmar Reembolso'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
