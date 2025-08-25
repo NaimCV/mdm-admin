@@ -9,8 +9,6 @@ import { ordersAPI } from '../config/api';
 export default function Pedidos() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
   
   const { notifications, showSuccess, showError, removeNotification } = useNotification();
 
@@ -145,6 +143,15 @@ export default function Pedidos() {
                             </h3>
                             <p className="text-sm text-gray-500">
                               {order.customer_name} - {order.customer_email}
+                              {order.email_verified ? (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                  ✅ Verificado
+                                </span>
+                              ) : (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  ⏳ Pendiente
+                                </span>
+                              )}
                             </p>
                             <p className="text-sm text-gray-500">
                               {order.customer_phone}
@@ -174,7 +181,18 @@ export default function Pedidos() {
                           <ul className="mt-1 space-y-1">
                             {order.items.map((item, index) => (
                               <li key={index} className="text-sm text-gray-600">
-                                {item.product.name} x{item.quantity} - €{item.unit_price.toFixed(2)}
+                                <div>
+                                  <span className="font-medium">{item.product.name}</span> x{item.quantity} - €{item.unit_price.toFixed(2)}
+                                  {item.selected_options && Object.keys(item.selected_options).length > 0 && (
+                                    <div className="ml-2 text-xs text-gray-500">
+                                      {Object.entries(item.selected_options).map(([optionName, optionValue]) => (
+                                        <span key={optionName} className="block">
+                                          {optionName}: {optionValue}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -182,15 +200,12 @@ export default function Pedidos() {
                       </div>
                       
                       <div className="ml-6 flex flex-col space-y-2">
-                        <button
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setShowModal(true);
-                          }}
+                        <Link
+                          href={`/pedidos/${order.id}`}
                           className="text-blue-600 hover:text-blue-900 text-sm font-medium"
                         >
                           Ver Detalles
-                        </button>
+                        </Link>
                         
                         <select
                           value={order.status}
@@ -213,83 +228,6 @@ export default function Pedidos() {
         </div>
       </main>
 
-      {/* Modal de Detalles */}
-      {showModal && selectedOrder && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Detalles del Pedido #{selectedOrder.id}
-                </h3>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900">Información del Cliente</h4>
-                  <div className="mt-2 text-sm text-gray-600">
-                    <p><strong>Nombre:</strong> {selectedOrder.customer_name}</p>
-                    <p><strong>Email:</strong> {selectedOrder.customer_email}</p>
-                    <p><strong>Teléfono:</strong> {selectedOrder.customer_phone}</p>
-                    <p><strong>Dirección:</strong> {selectedOrder.shipping_address}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900">Productos</h4>
-                  <div className="mt-2">
-                    {selectedOrder.items.map((item, index) => (
-                      <div key={index} className="flex justify-between py-2 border-b border-gray-200">
-                        <div>
-                          <p className="font-medium">{item.product.name}</p>
-                          <p className="text-sm text-gray-600">Cantidad: {item.quantity}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">€{item.unit_price.toFixed(2)}</p>
-                          <p className="text-sm text-gray-600">Total: €{(item.quantity * item.unit_price).toFixed(2)}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="flex justify-between py-2 font-bold text-lg">
-                      <span>Total del Pedido:</span>
-                      <span>€{selectedOrder.total_amount.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900">Información del Pedido</h4>
-                  <div className="mt-2 text-sm text-gray-600">
-                    <p><strong>Fecha de Creación:</strong> {formatDate(selectedOrder.created_at)}</p>
-                    <p><strong>Estado:</strong> 
-                      <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedOrder.status)}`}>
-                        {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-medium hover:bg-gray-700"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 
