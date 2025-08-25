@@ -17,6 +17,36 @@ export default function DetallePedido() {
   const [showPartialRefund, setShowPartialRefund] = useState(false);
   const [partialRefundAmount, setPartialRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
+  const [showMarkPayment, setShowMarkPayment] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [showRecordTransfer, setShowRecordTransfer] = useState(false);
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferDate, setTransferDate] = useState('');
+  const [transferReference, setTransferReference] = useState('');
+  const [transferNotes, setTransferNotes] = useState('');
+  
+  // Nuevos estados para modales específicos
+  const [showCompleteTransfer, setShowCompleteTransfer] = useState(false);
+  const [showPartialTransfer, setShowPartialTransfer] = useState(false);
+  const [showManualPayment, setShowManualPayment] = useState(false);
+  
+  // Estados para transferencia completa
+  const [completeTransferDate, setCompleteTransferDate] = useState('');
+  const [completeTransferReference, setCompleteTransferReference] = useState('');
+  const [completeTransferNotes, setCompleteTransferNotes] = useState('');
+  
+  // Estados para transferencia parcial
+  const [partialTransferAmount, setPartialTransferAmount] = useState('');
+  const [partialTransferDate, setPartialTransferDate] = useState('');
+  const [partialTransferReference, setPartialTransferReference] = useState('');
+  const [partialTransferNotes, setPartialTransferNotes] = useState('');
+  
+  // Estados para pago manual
+  const [manualPaymentAmount, setManualPaymentAmount] = useState('');
+  const [manualPaymentMethod, setManualPaymentMethod] = useState('efectivo');
+  const [manualPaymentDate, setManualPaymentDate] = useState('');
+  const [manualPaymentNotes, setManualPaymentNotes] = useState('');
   
   const { notifications, showSuccess, showError, removeNotification } = useNotification();
 
@@ -133,6 +163,334 @@ export default function DetallePedido() {
     }
     
     await handleRefund(amount, refundReason.trim());
+  };
+
+  const handleMarkAsPaid = async (amount) => {
+    try {
+      setUpdating(true);
+      
+      // Actualizar el pedido como pagado
+      await ordersAPI.update(order.id, { 
+        payment_status: 'succeeded', 
+        payment_method: 'transfer'
+      });
+      
+      // Recargar el pedido para obtener la información actualizada
+      await loadOrder();
+      
+      showSuccess('Pedido marcado como pagado con transferencia bancaria.');
+    } catch (error) {
+      console.error('Error marcando pedido como pagado:', error);
+      showError('Error al marcar el pedido como pagado.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleMarkPartialPayment = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (!amount || amount <= 0) {
+      showError('Por favor ingresa una cantidad válida');
+      return;
+    }
+    
+    try {
+      setUpdating(true);
+      
+      // Actualizar el pedido con el pago parcial
+      await ordersAPI.update(order.id, { 
+        payment_status: 'partial',
+        payment_method: 'transfer',
+        payment_notes: paymentNotes || `Pago parcial de €${amount.toFixed(2)}`
+      });
+      
+      // Recargar el pedido para obtener la información actualizada
+      await loadOrder();
+      
+      showSuccess(`Pago parcial de €${amount.toFixed(2)} registrado correctamente.`);
+      setShowMarkPayment(false);
+      setPaymentAmount('');
+      setPaymentNotes('');
+    } catch (error) {
+      console.error('Error registrando pago parcial:', error);
+      showError('Error al registrar el pago parcial.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleRecordTransfer = async () => {
+    const amount = parseFloat(transferAmount);
+    if (!amount || amount <= 0) {
+      showError('Por favor ingresa una cantidad válida');
+      return;
+    }
+    
+    if (!transferDate) {
+      showError('Por favor selecciona la fecha de la transferencia');
+      return;
+    }
+    
+    try {
+      setUpdating(true);
+      
+      // Calcular el total pagado hasta ahora
+      const currentPaid = order.payment_status === 'succeeded' ? order.total_amount : 
+                         order.payment_status === 'partial' ? (order.payment_amount || 0) : 0;
+      const newTotalPaid = currentPaid + amount;
+      
+      // Crear nota de transferencia con todos los detalles
+      const transferNote = `Transferencia recibida: €${amount.toFixed(2)} el ${new Date(transferDate).toLocaleDateString('es-ES')}${transferReference ? ` - Ref: ${transferReference}` : ''}${transferNotes ? ` - ${transferNotes}` : ''}`;
+      
+      // Construir el historial completo
+      let fullHistory = '';
+      if (order.payment_notes) {
+        fullHistory = order.payment_notes + '\n' + transferNote;
+      } else {
+        fullHistory = transferNote;
+      }
+      
+      // Determinar el nuevo estado del pago
+      let newPaymentStatus = 'partial';
+      if (newTotalPaid >= order.total_amount) {
+        newPaymentStatus = 'succeeded';
+      }
+      
+      // Actualizar el pedido con la nueva transferencia
+      await ordersAPI.update(order.id, { 
+        payment_status: newPaymentStatus,
+        payment_method: 'transfer',
+        payment_amount: newTotalPaid,
+        payment_notes: fullHistory,
+        updated_at: new Date().toISOString()
+      });
+      
+      // Recargar el pedido para obtener la información actualizada
+      await loadOrder();
+      
+      if (newPaymentStatus === 'succeeded') {
+        showSuccess(`✅ Transferencia de €${amount.toFixed(2)} registrada. ¡Pedido completamente pagado!`);
+      } else {
+        showSuccess(`💰 Transferencia de €${amount.toFixed(2)} registrada. Total pagado: €${newTotalPaid.toFixed(2)}`);
+      }
+      
+      // Limpiar el modal
+      setShowRecordTransfer(false);
+      setTransferAmount('');
+      setTransferDate('');
+      setTransferReference('');
+      setTransferNotes('');
+      
+    } catch (error) {
+      console.error('Error registrando transferencia:', error);
+      showError('Error al registrar la transferencia.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Nueva función para transferencia completa
+  const handleCompleteTransfer = async () => {
+    if (!completeTransferDate) {
+      showError('Por favor selecciona la fecha de la transferencia');
+      return;
+    }
+    
+    try {
+      setUpdating(true);
+      
+      // Crear nota de transferencia completa
+      const transferNote = `Transferencia completa recibida: €${order.total_amount.toFixed(2)} el ${new Date(completeTransferDate).toLocaleDateString('es-ES')}${completeTransferReference ? ` - Ref: ${completeTransferReference}` : ''}${completeTransferNotes ? ` - ${completeTransferNotes}` : ''}`;
+      
+      // Construir el historial completo
+      let fullHistory = '';
+      if (order.payment_notes) {
+        fullHistory = order.payment_notes + '\n' + transferNote;
+      } else {
+        fullHistory = transferNote;
+      }
+      
+      // Actualizar el pedido como completamente pagado
+      await ordersAPI.update(order.id, { 
+        payment_status: 'succeeded',
+        payment_method: 'transfer',
+        payment_amount: order.total_amount,
+        payment_notes: fullHistory,
+        updated_at: new Date().toISOString()
+      });
+      
+      // Recargar el pedido
+      await loadOrder();
+      showSuccess(`✅ Transferencia completa de €${order.total_amount.toFixed(2)} registrada. ¡Pedido completamente pagado!`);
+      
+      // Limpiar el modal
+      setShowCompleteTransfer(false);
+      setCompleteTransferDate('');
+      setCompleteTransferReference('');
+      setCompleteTransferNotes('');
+      
+    } catch (error) {
+      console.error('Error registrando transferencia completa:', error);
+      showError('Error al registrar la transferencia completa.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Nueva función para transferencia parcial
+  const handlePartialTransfer = async () => {
+    const amount = parseFloat(partialTransferAmount);
+    if (!amount || amount <= 0) {
+      showError('Por favor ingresa una cantidad válida');
+      return;
+    }
+    
+    if (!partialTransferDate) {
+      showError('Por favor selecciona la fecha de la transferencia');
+      return;
+    }
+    
+    try {
+      setUpdating(true);
+      
+      // Calcular el total pagado hasta ahora
+      const currentPaid = order.payment_status === 'succeeded' ? order.total_amount : 
+                         order.payment_status === 'partial' ? (order.payment_amount || 0) : 0;
+      const newTotalPaid = currentPaid + amount;
+      
+      // Crear nota de transferencia parcial
+      const transferNote = `Transferencia parcial recibida: €${amount.toFixed(2)} el ${new Date(partialTransferDate).toLocaleDateString('es-ES')}${partialTransferReference ? ` - Ref: ${partialTransferReference}` : ''}${partialTransferNotes ? ` - ${partialTransferNotes}` : ''}`;
+      
+      // Construir el historial completo
+      let fullHistory = '';
+      if (order.payment_notes) {
+        fullHistory = order.payment_notes + '\n' + transferNote;
+      } else {
+        fullHistory = transferNote;
+      }
+      
+      // Determinar el nuevo estado del pago
+      let newPaymentStatus = 'partial';
+      if (newTotalPaid >= order.total_amount) {
+        newPaymentStatus = 'succeeded';
+      }
+      
+      // Actualizar el pedido
+      await ordersAPI.update(order.id, { 
+        payment_status: newPaymentStatus,
+        payment_method: 'transfer',
+        payment_amount: newTotalPaid,
+        payment_notes: fullHistory,
+        updated_at: new Date().toISOString()
+      });
+      
+      // Recargar el pedido
+      await loadOrder();
+      
+      if (newPaymentStatus === 'succeeded') {
+        showSuccess(`✅ Transferencia parcial de €${amount.toFixed(2)} registrada. ¡Pedido completamente pagado!`);
+      } else {
+        showSuccess(`💰 Transferencia parcial de €${amount.toFixed(2)} registrada. Total pagado: €${newTotalPaid.toFixed(2)}`);
+      }
+      
+      // Limpiar el modal
+      setShowPartialTransfer(false);
+      setPartialTransferAmount('');
+      setPartialTransferDate('');
+      setPartialTransferReference('');
+      setPartialTransferNotes('');
+      
+    } catch (error) {
+      console.error('Error registrando transferencia parcial:', error);
+      showError('Error al registrar la transferencia parcial.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Nueva función para pago manual
+  const handleManualPayment = async () => {
+    const amount = parseFloat(manualPaymentAmount);
+    if (!amount || amount <= 0) {
+      showError('Por favor ingresa una cantidad válida');
+      return;
+    }
+    
+    if (!manualPaymentDate) {
+      showError('Por favor selecciona la fecha del pago');
+      return;
+    }
+    
+    try {
+      setUpdating(true);
+      
+      // Calcular el total pagado hasta ahora
+      const currentPaid = order.payment_status === 'succeeded' ? order.total_amount : 
+                         order.payment_status === 'partial' ? (order.payment_amount || 0) : 0;
+      const newTotalPaid = currentPaid + amount;
+      
+      // Crear nota de pago manual
+      const paymentNote = `Pago manual (${manualPaymentMethod}): €${amount.toFixed(2)} el ${new Date(manualPaymentDate).toLocaleDateString('es-ES')}${manualPaymentNotes ? ` - ${manualPaymentNotes}` : ''}`;
+      
+      // Construir el historial completo
+      let fullHistory = '';
+      if (order.payment_notes) {
+        fullHistory = order.payment_notes + '\n' + paymentNote;
+      } else {
+        fullHistory = paymentNote;
+      }
+      
+      // Determinar el nuevo estado del pago
+      let newPaymentStatus = 'partial';
+      if (newTotalPaid >= order.total_amount) {
+        newPaymentStatus = 'succeeded';
+      }
+      
+      // Actualizar el pedido
+      await ordersAPI.update(order.id, { 
+        payment_status: newPaymentStatus,
+        payment_method: manualPaymentMethod,
+        payment_amount: newTotalPaid,
+        payment_notes: fullHistory,
+        updated_at: new Date().toISOString()
+      });
+      
+      // Recargar el pedido
+      await loadOrder();
+      
+      if (newPaymentStatus === 'succeeded') {
+        showSuccess(`✅ Pago manual de €${amount.toFixed(2)} registrado. ¡Pedido completamente pagado!`);
+      } else {
+        showSuccess(`💰 Pago manual de €${amount.toFixed(2)} registrado. Total pagado: €${newTotalPaid.toFixed(2)}`);
+      }
+      
+      // Limpiar el modal
+      setShowManualPayment(false);
+      setManualPaymentAmount('');
+      setManualPaymentMethod('efectivo');
+      setManualPaymentDate('');
+      setManualPaymentNotes('');
+      
+    } catch (error) {
+      console.error('Error registrando pago manual:', error);
+      showError('Error al registrar el pago manual.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSetPaymentMethod = async (method) => {
+    try {
+      setUpdating(true);
+      await ordersAPI.update(order.id, { payment_method: method });
+      setOrder({ ...order, payment_method: method });
+      showSuccess(`Método de pago establecido como: ${method}`);
+    } catch (error) {
+      console.error('Error estableciendo método de pago:', error);
+      showError('Error al establecer el método de pago.');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -332,114 +690,258 @@ export default function DetallePedido() {
         </div>
 
         {/* Información de Pago y Reembolso */}
-        {/* Mostrar información de pago si existe algún método de pago */}
-        {(order.payment_method || order.stripe_payment_intent_id) && (
-          <div className="mt-6">
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Información de Pago</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
-                  <p className="mt-1 text-sm text-gray-900">Tarjeta (Stripe)</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Estado del Pago</label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      order.payment_status === 'succeeded' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        <div className="mt-6">
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Información de Pago</h2>
+            
+            {/* Estado del Pago */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+                <div className="mt-1">
+                  {order.payment_method ? (
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      order.payment_method === 'stripe' ? 'bg-blue-100 text-blue-800' :
+                      order.payment_method === 'transfer' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
                     }`}>
-                      {order.payment_status === 'succeeded' ? 'Pagado' : 'Pendiente'}
+                      {order.payment_method === 'stripe' ? '💳 Tarjeta (Stripe)' :
+                       order.payment_method === 'transfer' ? '🏦 Transferencia Bancaria' :
+                       order.payment_method || 'No especificado'}
                     </span>
-                  </p>
+                  ) : (
+                    <span className="text-sm text-gray-500">No especificado</span>
+                  )}
                 </div>
-                {order.stripe_payment_intent_id && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">ID de Pago Stripe</label>
-                    <p className="mt-1 text-sm text-gray-900 font-mono">{order.stripe_payment_intent_id}</p>
-                  </div>
-                )}
-                {order.refund_status && order.refund_status !== 'none' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Estado del Reembolso</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        order.refund_status === 'completed' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {order.refund_status === 'completed' ? 'Completado' : 'En Proceso'}
-                      </span>
-                    </p>
-                  </div>
-                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Estado del Pago</label>
+                <div className="mt-1">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    order.payment_status === 'succeeded' ? 'bg-green-100 text-green-800' :
+                    order.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    order.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {order.payment_status === 'succeeded' ? '✅ Pagado' :
+                     order.payment_status === 'pending' ? '⏳ Pendiente' :
+                     order.payment_status === 'failed' ? '❌ Fallido' :
+                     order.payment_status || 'No especificado'}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Opciones de Reembolso - Mostrar siempre que el pedido esté cancelado */}
-        {(order.status === 'cancelado' || order.payment_method === 'card') && 
-         (order.refund_status === 'none' || order.refund_status === null || order.refund_status === '') && (
-          <div className="mt-6">
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Procesar Reembolso</h2>
-              
-              {/* Mostrar mensaje diferente según el estado */}
-              {order.status === 'cancelado' ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">Pedido Cancelado</h3>
-                      <div className="mt-2 text-sm text-blue-700">
-                        <p>• Este pedido está cancelado y requiere reembolso</p>
-                        <p>• El reembolso se procesará automáticamente a la tarjeta del cliente</p>
-                        <p>• Se enviará un email de confirmación al cliente</p>
-                      </div>
-                    </div>
-                  </div>
+            {/* Resumen Financiero */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Resumen Financiero</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">€{order.total_amount.toFixed(2)}</div>
+                  <div className="text-sm text-gray-600">Total del Pedido</div>
                 </div>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">Pedido Pagado con Tarjeta</h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <p>• Este pedido fue pagado con tarjeta y puede ser reembolsado</p>
-                        <p>• El reembolso se procesará automáticamente a la tarjeta del cliente</p>
-                        <p>• El estado del pedido cambiará a "Cancelado"</p>
-                      </div>
-                    </div>
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${
+                    order.payment_status === 'succeeded' ? 'text-green-600' : 
+                    order.payment_status === 'partial' ? 'text-blue-600' : 'text-yellow-600'
+                  }`}>
+                    €{(() => {
+                      if (order.payment_status === 'succeeded') return order.total_amount;
+                      if (order.payment_status === 'partial') return order.payment_amount || 0;
+                      return 0;
+                    })().toFixed(2)}
                   </div>
+                  <div className="text-sm text-gray-600">Pagado</div>
                 </div>
-              )}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-600">
+                    €{(() => {
+                      const total = order.total_amount;
+                      const paid = order.payment_status === 'succeeded' ? total : 
+                                  order.payment_status === 'partial' ? (order.payment_amount || 0) : 0;
+                      return Math.max(0, total - paid);
+                    })().toFixed(2)}
+                  </div>
+                  <div className="text-sm text-gray-600">Pendiente</div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${
+                    order.refund_amount && order.refund_amount > 0 ? 'text-red-600' : 'text-gray-600'
+                  }`}>
+                    €{(order.refund_amount || 0).toFixed(2)}
+                  </div>
+                  <div className="text-sm text-gray-600">Reembolsado</div>
+                </div>
+              </div>
               
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleRefund(order.total_amount)}
-                  disabled={updating}
-                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-                >
-                  {updating ? 'Procesando...' : `Reembolsar €${order.total_amount.toFixed(2)}`}
-                </button>
-                <button
-                  onClick={() => setShowPartialRefund(true)}
-                  disabled={updating}
-                  className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-                >
-                  Reembolso Parcial
-                </button>
+              {/* Estado de la cuenta */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Estado de la Cuenta:</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    order.payment_status === 'succeeded' ? 'bg-green-100 text-green-800' :
+                    order.payment_status === 'partial' ? 'bg-blue-100 text-blue-800' :
+                    order.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {order.payment_status === 'succeeded' ? '✅ Cuenta Saldada' :
+                     order.payment_status === 'partial' ? '💰 Pago Parcial' :
+                     order.payment_status === 'pending' ? '⏳ Pendiente de Pago' :
+                     '❓ Estado Desconocido'}
+                  </span>
+                </div>
               </div>
             </div>
+
+            {/* Información Específica del Método de Pago */}
+            {order.payment_method === 'stripe' && order.stripe_payment_intent_id && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-medium text-blue-900 mb-3">💳 Información de Stripe</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-700">ID de Pago Stripe</label>
+                    <p className="mt-1 text-sm font-mono text-blue-900">{order.stripe_payment_intent_id}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-700">Estado del Pago</label>
+                    <p className="mt-1 text-sm text-blue-900">{order.payment_status}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sección de Transferencia - Mostrar siempre si no es Stripe o si no hay método definido */}
+            {(order.payment_method === 'transfer' || !order.payment_method || order.payment_method === 'pending') && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-medium text-green-900 mb-3">🏦 Información de Transferencia</h3>
+                <div className="space-y-4">                  
+                  {/* Mostrar historial de transferencias si existe */}
+                  {order.payment_notes && (
+                    <div className="bg-white rounded-lg p-3 border border-green-200">
+                      <h4 className="text-sm font-medium text-green-800 mb-2">📋 Historial de Transferencias:</h4>
+                      <p className="text-sm text-green-700 whitespace-pre-line">{order.payment_notes}</p>
+                    </div>
+                  )}
+                  
+                  {/* Botones para gestionar pagos - Mostrar si es transferencia o si no hay método definido */}
+                  {(order.payment_method === 'transfer' || !order.payment_method || order.payment_method === 'pending') && order.payment_status !== 'succeeded' && (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setCompleteTransferDate(new Date().toISOString().split('T')[0]);
+                          setShowCompleteTransfer(true);
+                        }}
+                        disabled={updating}
+                        className="bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                      >
+                        {updating ? 'Procesando...' : '📥 Registrar Transferencia Completa'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPartialTransferAmount('');
+                          setPartialTransferDate(new Date().toISOString().split('T')[0]);
+                          setShowPartialTransfer(true);
+                        }}
+                        disabled={updating}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                      >
+                        {updating ? 'Procesando...' : '💰 Registrar Transferencia Parcial'}
+                      </button>
+                      <button
+                        onClick={() => handleMarkAsPaid(order.total_amount)}
+                        disabled={updating}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                      >
+                        {updating ? 'Procesando...' : '✅ Marcar como Pagado'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setManualPaymentAmount('');
+                          setManualPaymentDate(new Date().toISOString().split('T')[0]);
+                          setShowManualPayment(true);
+                        }}
+                        disabled={updating}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                      >
+                        {updating ? 'Procesando...' : '💰 Registrar Pago Manual'}
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Información del estado actual */}
+                  <div className="text-sm text-green-600">
+                    {order.payment_status === 'succeeded' ? 
+                      '✅ Pedido completamente pagado' :
+                      order.payment_status === 'partial' ? 
+                      `💰 Pago parcial registrado. Pendiente: €${(order.total_amount - (order.payment_amount || 0)).toFixed(2)}` :
+                      '⏳ Pendiente de confirmación de pago'
+                    }
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Información de Reembolsos */}
+            {order.refund_status && order.refund_status !== 'none' && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-medium text-orange-900 mb-3">🔄 Información de Reembolso</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-orange-700">Estado del Reembolso</label>
+                    <p className="mt-1 text-sm text-orange-900">{order.refund_status}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-orange-700">Cantidad Reembolsada</label>
+                    <p className="mt-1 text-sm text-orange-900">€{order.refund_amount?.toFixed(2)}</p>
+                  </div>
+                  {order.refund_reason && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-orange-700">Motivo del Reembolso</label>
+                      <p className="mt-1 text-sm text-orange-900">{order.refund_reason}</p>
+                    </div>
+                  )}
+                  {order.stripe_refund_id && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-orange-700">ID de Reembolso Stripe</label>
+                      <p className="mt-1 text-sm font-mono text-orange-900">{order.stripe_refund_id}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Opciones de Reembolso */}
+            {order.payment_method === 'stripe' && 
+             order.payment_status === 'succeeded' && 
+             (order.refund_status === 'none' || !order.refund_status) && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-yellow-900 mb-3">💳 Opciones de Reembolso</h3>
+                <div className="space-y-3">
+                  <p className="text-sm text-yellow-700">
+                    Este pedido fue pagado con tarjeta y puede ser reembolsado.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleRefund(order.total_amount)}
+                      disabled={updating}
+                      className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                    >
+                      {updating ? 'Procesando...' : `Reembolsar €${order.total_amount.toFixed(2)}`}
+                    </button>
+                    <button
+                      onClick={() => setShowPartialRefund(true)}
+                      disabled={updating}
+                      className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                    >
+                      Reembolso Parcial
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Acciones Adicionales */}
         <div className={styles.actionsContainer}>
@@ -532,6 +1034,498 @@ export default function DetallePedido() {
                 className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:bg-orange-300 transition-colors duration-200"
               >
                 {updating ? 'Procesando...' : 'Confirmar Reembolso'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Pago Parcial */}
+      {showMarkPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Registrar Pago Parcial</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cantidad a Pagar (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={order.total_amount}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={`Máximo: €${order.total_amount.toFixed(2)}`}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas del Pago
+                </label>
+                <textarea
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Notas adicionales para el pago parcial..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowMarkPayment(false);
+                  setPaymentAmount('');
+                  setPaymentNotes('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleMarkPartialPayment}
+                disabled={updating || !paymentAmount}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 transition-colors duration-200"
+              >
+                {updating ? 'Procesando...' : 'Confirmar Pago Parcial'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Transferencia */}
+      {showRecordTransfer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Registrar Transferencia Recibida</h3>
+            
+            {/* Información de la transferencia */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="text-sm text-blue-800">
+                <div className="font-medium mb-1">
+                  {transferAmount && parseFloat(transferAmount) >= order.total_amount ? 
+                    '✅ Transferencia completa' : 
+                    transferAmount ? '💰 Transferencia parcial' : 
+                    '📝 Registrando nueva transferencia'
+                  }
+                </div>
+                <div className="text-xs">
+                  Total del pedido: €{order.total_amount.toFixed(2)}
+                  {transferAmount && (
+                    <>
+                      <br />
+                      Cantidad a registrar: €{parseFloat(transferAmount).toFixed(2)}
+                      <br />
+                      Saldo pendiente: €{Math.max(0, order.total_amount - parseFloat(transferAmount)).toFixed(2)}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cantidad Recibida (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={order.total_amount}
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={`Máximo: €${order.total_amount.toFixed(2)}`}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  Importe del pedido: €{order.total_amount.toFixed(2)}
+                  {transferAmount && (
+                    <span className="block mt-1">
+                      Saldo pendiente: €{Math.max(0, order.total_amount - parseFloat(transferAmount)).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de la Transferencia
+                </label>
+                <input
+                  type="date"
+                  value={transferDate}
+                  onChange={(e) => setTransferDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Referencia de la Transferencia (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={transferReference}
+                  onChange={(e) => setTransferReference(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: 1234567890"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas Adicionales (Opcional)
+                </label>
+                <textarea
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Notas sobre la transferencia..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowRecordTransfer(false);
+                  setTransferAmount('');
+                  setTransferDate('');
+                  setTransferReference('');
+                  setTransferNotes('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRecordTransfer}
+                disabled={updating || !transferAmount || !transferDate}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300 transition-colors duration-200"
+              >
+                {updating ? 'Procesando...' : 'Confirmar Transferencia'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Transferencia Completa */}
+      {showCompleteTransfer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">🏦 Registrar Transferencia Completa</h3>
+            
+            {/* Información de la transferencia */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <div className="text-sm text-green-800">
+                <div className="font-medium mb-1">✅ Transferencia completa</div>
+                <div className="text-xs">
+                  Total del pedido: €{order.total_amount.toFixed(2)}
+                  <br />
+                  Cantidad a registrar: €{order.total_amount.toFixed(2)}
+                  <br />
+                  Saldo pendiente: €0.00
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de la Transferencia
+                </label>
+                <input
+                  type="date"
+                  value={completeTransferDate}
+                  onChange={(e) => setCompleteTransferDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Referencia de la Transferencia (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={completeTransferReference}
+                  onChange={(e) => setCompleteTransferReference(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Ej: 1234567890"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas Adicionales (Opcional)
+                </label>
+                <textarea
+                  value={completeTransferNotes}
+                  onChange={(e) => setCompleteTransferNotes(e.target.value)}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Notas sobre la transferencia..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCompleteTransfer(false);
+                  setCompleteTransferDate('');
+                  setCompleteTransferReference('');
+                  setCompleteTransferNotes('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCompleteTransfer}
+                disabled={updating || !completeTransferDate}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300 transition-colors duration-200"
+              >
+                {updating ? 'Procesando...' : 'Confirmar Transferencia Completa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Transferencia Parcial */}
+      {showPartialTransfer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 Registrar Transferencia Parcial</h3>
+            
+            {/* Información de la transferencia */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="text-sm text-blue-800">
+                <div className="font-medium mb-1">💰 Transferencia parcial</div>
+                <div className="text-xs">
+                  Total del pedido: €{order.total_amount.toFixed(2)}
+                  {partialTransferAmount && (
+                    <>
+                      <br />
+                      Cantidad a registrar: €{parseFloat(partialTransferAmount).toFixed(2)}
+                      <br />
+                      Saldo pendiente: €{Math.max(0, order.total_amount - parseFloat(partialTransferAmount)).toFixed(2)}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cantidad Recibida (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={order.total_amount}
+                  value={partialTransferAmount}
+                  onChange={(e) => setPartialTransferAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={`Máximo: €${order.total_amount.toFixed(2)}`}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  Importe del pedido: €{order.total_amount.toFixed(2)}
+                  {partialTransferAmount && (
+                    <span className="block mt-1">
+                      Saldo pendiente: €{Math.max(0, order.total_amount - parseFloat(partialTransferAmount)).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de la Transferencia
+                </label>
+                <input
+                  type="date"
+                  value={partialTransferDate}
+                  onChange={(e) => setPartialTransferDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Referencia de la Transferencia (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={partialTransferReference}
+                  onChange={(e) => setPartialTransferReference(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: 1234567890"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas Adicionales (Opcional)
+                </label>
+                <textarea
+                  value={partialTransferNotes}
+                  onChange={(e) => setPartialTransferNotes(e.target.value)}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Notas sobre la transferencia..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowPartialTransfer(false);
+                  setPartialTransferAmount('');
+                  setPartialTransferDate('');
+                  setPartialTransferReference('');
+                  setPartialTransferNotes('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePartialTransfer}
+                disabled={updating || !partialTransferAmount || !partialTransferDate}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 transition-colors duration-200"
+              >
+                {updating ? 'Procesando...' : 'Confirmar Transferencia Parcial'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Pago Manual */}
+      {showManualPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 Registrar Pago Manual</h3>
+            
+            {/* Información del pago */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
+              <div className="text-sm text-purple-800">
+                <div className="font-medium mb-1">💰 Pago manual</div>
+                <div className="text-xs">
+                  Total del pedido: €{order.total_amount.toFixed(2)}
+                  {manualPaymentAmount && (
+                    <>
+                      <br />
+                      Cantidad a registrar: €{parseFloat(manualPaymentAmount).toFixed(2)}
+                      <br />
+                      Saldo pendiente: €{Math.max(0, order.total_amount - parseFloat(manualPaymentAmount)).toFixed(2)}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cantidad Recibida (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={order.total_amount}
+                  value={manualPaymentAmount}
+                  onChange={(e) => setManualPaymentAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder={`Máximo: €${order.total_amount.toFixed(2)}`}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  Importe del pedido: €{order.total_amount.toFixed(2)}
+                  {manualPaymentAmount && (
+                    <span className="block mt-1">
+                      Saldo pendiente: €{Math.max(0, order.total_amount - parseFloat(manualPaymentAmount)).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Método de Pago
+                </label>
+                <select
+                  value={manualPaymentMethod}
+                  onChange={(e) => setManualPaymentMethod(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="efectivo">💵 Efectivo</option>
+                  <option value="cheque">🏦 Cheque</option>
+                  <option value="paypal">💳 PayPal</option>
+                  <option value="otro">🔧 Otro</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha del Pago
+                </label>
+                <input
+                  type="date"
+                  value={manualPaymentDate}
+                  onChange={(e) => setManualPaymentDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas Adicionales (Opcional)
+                </label>
+                <textarea
+                  value={manualPaymentNotes}
+                  onChange={(e) => setManualPaymentNotes(e.target.value)}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Notas sobre el pago..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowManualPayment(false);
+                  setManualPaymentAmount('');
+                  setManualPaymentMethod('efectivo');
+                  setManualPaymentDate('');
+                  setManualPaymentNotes('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleManualPayment}
+                disabled={updating || !manualPaymentAmount || !manualPaymentDate}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-purple-300 transition-colors duration-200"
+              >
+                {updating ? 'Procesando...' : 'Confirmar Pago Manual'}
               </button>
             </div>
           </div>
