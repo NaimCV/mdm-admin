@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useNotification } from '../../hooks/useNotification';
 import Notification from '../../components/Notification';
-import { ordersAPI } from '../../config/api';
+import { ordersAPI, paymentsAPI } from '../../config/api';
 import styles from './page.module.css';
 
 export default function DetallePedido() {
@@ -24,6 +24,7 @@ export default function DetallePedido() {
     try {
       setLoading(true);
       const orderData = await ordersAPI.getById(params.id);
+      console.log('🔄 Datos del pedido cargados:', orderData);
       setOrder(orderData);
     } catch (error) {
       console.error('Error cargando pedido:', error);
@@ -32,6 +33,13 @@ export default function DetallePedido() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Función para forzar refresh de datos
+  const refreshOrder = async () => {
+    console.log('🔄 Forzando refresh de datos del pedido...');
+    await loadOrder();
+    showSuccess('Datos del pedido actualizados');
   };
 
   useEffect(() => {
@@ -81,22 +89,14 @@ export default function DetallePedido() {
         refund_reason: reason
       };
       
-      // Llamar a la API de reembolso
-      const response = await fetch('/api/payments/refund', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify(refundData)
-      });
+      // Llamar a la API de reembolso del backend
+      const response = await paymentsAPI.createRefund(refundData);
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Error al procesar el reembolso');
+      if (response.error) {
+        throw new Error(response.detail || 'Error al procesar el reembolso');
       }
       
-      const result = await response.json();
+      const result = response;
       
       // Recargar el pedido para obtener la información actualizada
       await loadOrder();
@@ -199,6 +199,14 @@ export default function DetallePedido() {
                 className={`${styles.actionButton} ${styles.buttonPrimary}`}
               >
                 {loading ? 'Actualizando...' : 'Actualizar'}
+              </button>
+              <button
+                onClick={refreshOrder}
+                disabled={loading}
+                className={`${styles.actionButton} ${styles.buttonSecondary}`}
+                title="Forzar actualización de datos del pedido"
+              >
+                🔄 Refresh
               </button>
             </div>
           </div>

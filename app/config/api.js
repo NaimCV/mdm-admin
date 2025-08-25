@@ -143,6 +143,20 @@ export const ordersAPI = {
   },
 };
 
+// Funciones para pagos y reembolsos
+export const paymentsAPI = {
+  createRefund: async (refundData) => {
+    return await apiRequest('/api/payments/refund', {
+      method: 'POST',
+      body: JSON.stringify(refundData),
+    });
+  },
+
+  getRefundStatus: async (orderId) => {
+    return await apiRequest(`/api/payments/refund/${orderId}`);
+  },
+};
+
 // Función para subir imágenes
 export const uploadImage = async (file) => {
   const formData = new FormData();
