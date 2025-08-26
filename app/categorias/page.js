@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useNotification } from '../hooks/useNotification';
 import Notification from '../components/Notification';
+import AdminLayout from '../components/AdminLayout';
 
 export default function Categorias() {
   const [categories, setCategories] = useState([]);
@@ -158,14 +159,16 @@ export default function Categorias() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Cargando categorías...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-xl">Cargando categorías...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AdminLayout>
       {/* Notifications */}
       {notifications.map(notification => (
         <Notification
@@ -339,6 +342,6 @@ export default function Categorias() {
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 } 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useNotification } from '../hooks/useNotification';
 import Notification from '../components/Notification';
 import { ordersAPI } from '../config/api';
+import AdminLayout from '../components/AdminLayout';
 
 export default function Pedidos() {
   const [orders, setOrders] = useState([]);
@@ -75,48 +76,44 @@ export default function Pedidos() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Cargando pedidos...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-xl">Cargando pedidos...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-        {/* Notifications */}
-        {notifications.map(notification => (
-          <Notification
-            key={notification.id}
-            message={notification.message}
-            type={notification.type}
-            duration={notification.duration}
-            onClose={() => removeNotification(notification.id)}
-          />
-        ))}
-        {/* Header */}
-        <header className="bg-white shadow">
+    <AdminLayout>
+      {/* Notifications */}
+      {notifications.map(notification => (
+        <Notification
+          key={notification.id}
+          message={notification.message}
+          type={notification.type}
+          duration={notification.duration}
+          onClose={() => removeNotification(notification.id)}
+        />
+      ))}
+      
+      {/* Header de la página */}
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-gray-500 hover:text-gray-700 mr-4">
-                ← Volver
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Gestión de Pedidos
-              </h1>
-            </div>
-            <div className="flex items-center">
-              <button
-                onClick={loadOrders}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                {loading ? 'Actualizando...' : 'Actualizar'}
-              </button>
-            </div>
+          <div className="flex justify-between items-center h-16">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Gestión de Pedidos
+            </h1>
+            <button
+              onClick={loadOrders}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              {loading ? 'Actualizando...' : 'Actualizar'}
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -227,7 +224,6 @@ export default function Pedidos() {
           )}
         </div>
       </main>
-
-    </div>
+    </AdminLayout>
   );
 } 

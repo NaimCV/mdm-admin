@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useNotification } from '../../hooks/useNotification';
 import Notification from '../../components/Notification';
 import { ordersAPI, paymentsAPI } from '../../config/api';
+import AdminLayout from '../../components/AdminLayout';
 import styles from './page.module.css';
 
 export default function DetallePedido() {
@@ -505,22 +506,26 @@ export default function DetallePedido() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Cargando detalles del pedido...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-xl">Cargando detalles del pedido...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl text-red-600">Pedido no encontrado</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-xl text-red-600">Pedido no encontrado</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className={styles.orderDetailContainer}>
+    <AdminLayout>
       {/* Notifications */}
       {notifications.map(notification => (
         <Notification
@@ -531,13 +536,13 @@ export default function DetallePedido() {
           onClose={() => removeNotification(notification.id)}
         />
       ))}
-
-      {/* Header */}
-      <header className={styles.header}>
+      
+      {/* Header de la página */}
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link href="/pedidos" className={`${styles.backButton} mr-4`}>
+              <Link href="/pedidos" className="text-gray-500 hover:text-gray-700 mr-4">
                 ← Volver a Pedidos
               </Link>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -575,7 +580,7 @@ export default function DetallePedido() {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className={styles.mainContent}>
@@ -1531,6 +1536,6 @@ export default function DetallePedido() {
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 }

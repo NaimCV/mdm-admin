@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useNotification } from '../hooks/useNotification';
 import Notification from '../components/Notification';
+import AdminLayout from '../components/AdminLayout';
 
 export default function Usuarios() {
   const [users, setUsers] = useState([]);
@@ -163,24 +164,26 @@ export default function Usuarios() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Cargando usuarios...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-xl">Cargando usuarios...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-        {/* Notifications */}
-        {notifications.map(notification => (
-          <Notification
-            key={notification.id}
-            message={notification.message}
-            type={notification.type}
-            duration={notification.duration}
-            onClose={() => removeNotification(notification.id)}
-          />
-        ))}
+    <AdminLayout>
+      {/* Notifications */}
+      {notifications.map(notification => (
+        <Notification
+          key={notification.id}
+          message={notification.message}
+          type={notification.type}
+          duration={notification.duration}
+          onClose={() => removeNotification(notification.id)}
+        />
+      ))}
         {/* Header */}
         <header className="bg-white shadow">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -369,6 +372,6 @@ export default function Usuarios() {
             </div>
           </div>
         )}
-    </div>
+    </AdminLayout>
   );
 } 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { adminAPI } from './config/api';
+import AdminLayout from './components/AdminLayout';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -11,28 +12,13 @@ export default function Dashboard() {
     pendingOrders: 0,
     totalRevenue: 0
   });
-  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadStats = async () => {
       try {
         setLoading(true);
         
-        // Cargar información del usuario actual
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setCurrentUser(userData);
-          }
-        }
-
         // Cargar estadísticas reales desde el backend
         const statsData = await adminAPI.getStats();
         console.log('📊 Estadísticas recibidas:', statsData);
@@ -59,51 +45,24 @@ export default function Dashboard() {
       }
     };
 
-    loadData();
+    loadStats();
   }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando estadísticas...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando estadísticas...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">
-                Panel de Administración
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              {currentUser && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Bienvenido,</p>
-                  <p className="text-sm font-medium text-gray-900">{currentUser.username}</p>
-                </div>
-              )}
-              <button 
-                onClick={() => {
-                  localStorage.removeItem('authToken');
-                  window.location.href = '/login';
-                }}
-                className="bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AdminLayout>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -251,6 +210,6 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
-    </div>
+    </AdminLayout>
   );
 }
