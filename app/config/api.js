@@ -141,6 +141,16 @@ export const ordersAPI = {
       method: 'DELETE',
     });
   },
+
+  search: async (query, searchType = 'all', skip = 0, limit = 50) => {
+    const params = new URLSearchParams({
+      query,
+      search_type: searchType,
+      skip: skip.toString(),
+      limit: limit.toString()
+    });
+    return await apiRequest(`/api/orders/search?${params}`);
+  },
 };
 
 // Funciones para pagos y reembolsos

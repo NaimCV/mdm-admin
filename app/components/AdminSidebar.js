@@ -19,7 +19,15 @@ export default function AdminSidebar({ currentUser, isCollapsed, onToggle }) {
         { name: 'Categorías', href: '/categorias', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' }
       ]
     },
-    { name: 'Pedidos', href: '/pedidos', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    { 
+      name: 'Pedidos', 
+      href: '/pedidos', 
+      icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      submenu: [
+        { name: 'Lista de Pedidos', href: '/pedidos', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+        { name: 'Buscar Pedido', href: '/pedidos/buscar', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' }
+      ]
+    },
     { name: 'Usuarios', href: '/usuarios', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z' },
   ];
 
@@ -51,6 +59,11 @@ export default function AdminSidebar({ currentUser, isCollapsed, onToggle }) {
     if (pathname.startsWith('/productos') || pathname.startsWith('/categorias')) {
       setExpandedItems(prev => 
         prev.includes('Productos') ? prev : [...prev, 'Productos']
+      );
+    }
+    if (pathname.startsWith('/pedidos')) {
+      setExpandedItems(prev => 
+        prev.includes('Pedidos') ? prev : [...prev, 'Pedidos']
       );
     }
   }, [pathname]);
