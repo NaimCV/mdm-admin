@@ -157,6 +157,13 @@ export const paymentsAPI = {
   },
 };
 
+// Funciones para estadísticas del admin
+export const adminAPI = {
+  getStats: async () => {
+    return await apiRequest('/api/admin/stats');
+  },
+};
+
 // Función para subir imágenes
 export const uploadImage = async (file) => {
   const formData = new FormData();

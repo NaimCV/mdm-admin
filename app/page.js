@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { adminAPI } from './config/api';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -11,11 +12,14 @@ export default function Dashboard() {
     totalRevenue: 0
   });
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Cargar información del usuario actual
-    const loadCurrentUser = async () => {
+    const loadData = async () => {
       try {
+        setLoading(true);
+        
+        // Cargar información del usuario actual
         const token = localStorage.getItem('authToken');
         if (token) {
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/me`, {
@@ -28,22 +32,46 @@ export default function Dashboard() {
             setCurrentUser(userData);
           }
         }
+
+        // Cargar estadísticas reales desde el backend
+        const statsData = await adminAPI.getStats();
+        console.log('📊 Estadísticas recibidas:', statsData);
+        
+        // Asegurar que todos los campos tengan valores por defecto
+        setStats({
+          totalProducts: statsData.total_products || 0,
+          totalOrders: statsData.total_orders || 0,
+          pendingOrders: statsData.pending_orders || 0,
+          totalRevenue: statsData.total_revenue || 0
+        });
+        
       } catch (error) {
-        console.error('Error cargando usuario:', error);
+        console.error('Error cargando datos:', error);
+        // En caso de error, mantener valores por defecto
+        setStats({
+          totalProducts: 0,
+          totalOrders: 0,
+          pendingOrders: 0,
+          totalRevenue: 0
+        });
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadCurrentUser();
-
-    // Aquí cargarías las estadísticas desde el backend
-    // Por ahora usamos datos de ejemplo
-    setStats({
-      totalProducts: 25,
-      totalOrders: 150,
-      pendingOrders: 12,
-      totalRevenue: 15420.50
-    });
+    loadData();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando estadísticas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -97,7 +125,7 @@ export default function Dashboard() {
                       Total Productos
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {stats.totalProducts}
+                      {stats.totalProducts || 0}
                     </dd>
                   </dl>
                 </div>
@@ -121,7 +149,7 @@ export default function Dashboard() {
                       Total Pedidos
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {stats.totalOrders}
+                      {stats.totalOrders || 0}
                     </dd>
                   </dl>
                 </div>
@@ -145,7 +173,7 @@ export default function Dashboard() {
                       Pedidos Pendientes
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {stats.pendingOrders}
+                      {stats.pendingOrders || 0}
                     </dd>
                   </dl>
                 </div>
@@ -169,7 +197,7 @@ export default function Dashboard() {
                       Ingresos Totales
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {stats.totalRevenue.toLocaleString()} €
+                      {(stats.totalRevenue || 0).toLocaleString()} €
                     </dd>
                   </dl>
                 </div>
