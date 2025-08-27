@@ -199,4 +199,32 @@ export const uploadImage = async (file) => {
     console.error('Image upload failed:', error);
     throw error;
   }
+};
+
+// API de contacto
+export const contactAPI = {
+  getAll: async () => {
+    return await apiRequest('/api/contacts');
+  },
+
+  getById: async (id) => {
+    return await apiRequest(`/api/contacts/${id}`);
+  },
+
+  update: async (id, contactData) => {
+    return await apiRequest(`/api/contacts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(contactData),
+    });
+  },
+
+  delete: async (id) => {
+    return await apiRequest(`/api/contacts/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getUnreadCount: async () => {
+    return await apiRequest('/api/contacts/unread/count');
+  },
 }; 
