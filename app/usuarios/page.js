@@ -121,12 +121,14 @@ export default function Usuarios() {
   const handleDelete = async (userId) => {
     if (confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
       try {
+<<<<<<< HEAD
                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}`, {
            method: 'DELETE',
            headers: {
              'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
            }
          });
+>>>>>>> d515be768f9627a0eb20d188aa222e4d5bba82df
         
         if (!response.ok) {
           throw new Error('Error al eliminar usuario');
@@ -143,12 +145,14 @@ export default function Usuarios() {
 
   const handleToggleAdmin = async (userId) => {
     try {
+<<<<<<< HEAD
                              const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/toggle-admin`, {
          method: 'POST',
          headers: {
            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
          }
        });
+>>>>>>> d515be768f9627a0eb20d188aa222e4d5bba82df
       
       if (!response.ok) {
         throw new Error('Error al cambiar estado de administrador');
