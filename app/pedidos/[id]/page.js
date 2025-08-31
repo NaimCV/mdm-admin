@@ -352,9 +352,9 @@ export default function DetallePedido() {
       }
       
       // Llamar al nuevo endpoint de confirmación de transferencias usando la API configurada
-      console.log('🚀 Llamando a endpoint:', `http://localhost:8000/api/orders/${order.id}/confirm-transfer`);
-      
-      const response = await fetch(`http://localhost:8000/api/orders/${order.id}/confirm-transfer`, {
+              console.log('🚀 Llamando a endpoint:', `${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/confirm-transfer`);
+        
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/confirm-transfer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

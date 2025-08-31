@@ -27,9 +27,9 @@ export default function Usuarios() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/users', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       
@@ -57,11 +57,11 @@ export default function Usuarios() {
 
       if (editingUser) {
         // Actualizar usuario existente
-        const response = await fetch(`http://localhost:8000/api/users/${editingUser.id}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${editingUser.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: JSON.stringify(userData)
         });
@@ -73,11 +73,11 @@ export default function Usuarios() {
         showSuccess('Usuario actualizado exitosamente');
       } else {
         // Crear nuevo usuario
-        const response = await fetch('http://localhost:8000/api/users', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: JSON.stringify(userData)
         });
@@ -121,7 +121,7 @@ export default function Usuarios() {
   const handleDelete = async (userId) => {
     if (confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
       try {
-        const response = await fetch(`http://localhost:8000/api/users/${userId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -143,7 +143,7 @@ export default function Usuarios() {
 
   const handleToggleAdmin = async (userId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/users/${userId}/toggle-admin`, {
+              const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/toggle-admin`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
