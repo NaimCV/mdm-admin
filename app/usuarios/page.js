@@ -124,7 +124,7 @@ export default function Usuarios() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           }
         });
         
@@ -143,10 +143,10 @@ export default function Usuarios() {
 
   const handleToggleAdmin = async (userId) => {
     try {
-              const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/toggle-admin`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/toggle-admin`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       

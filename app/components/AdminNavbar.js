@@ -72,7 +72,7 @@ export default function AdminNavbar({ currentUser }) {
             
             <button 
               onClick={() => {
-                localStorage.removeItem('authToken');
+                localStorage.removeItem('adminToken');
                 window.location.href = '/login';
               }}
               className="bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition-colors duration-200"

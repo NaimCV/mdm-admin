@@ -35,7 +35,7 @@ export default function ProductOptionsManager({ productId, onOptionsChange }) {
       setLoading(true);
       const response = await fetch(`${API_BASE_URL}/api/products/${productId}/options`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       
@@ -74,7 +74,7 @@ export default function ProductOptionsManager({ productId, onOptionsChange }) {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: JSON.stringify(formData)
         });
@@ -90,7 +90,7 @@ export default function ProductOptionsManager({ productId, onOptionsChange }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: JSON.stringify(formData)
         });
@@ -114,7 +114,7 @@ export default function ProductOptionsManager({ productId, onOptionsChange }) {
       const response = await fetch(`${API_BASE_URL}/api/product-options/${optionId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       
