@@ -1,0 +1,12 @@
+# Variables de entorno para Vercel (Admin Panel)
+# Copia estas variables en Vercel Dashboard
+
+# URL del backend en Railway
+NEXT_PUBLIC_API_URL=https://api-mimosdemadera.railway.app
+
+# Stripe (keys públicas)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_... # o pk_live_... para producción
+
+# Variables adicionales
+NEXT_PUBLIC_SITE_URL=https://mimosdemadera.com
+NEXT_PUBLIC_ENVIRONMENT=production

@@ -338,6 +338,58 @@ export default function DetallePedido() {
     }
   };
 
+  // Nueva función para confirmar transferencia bancaria usando el endpoint específico
+  const handleConfirmBankTransfer = async () => {
+    try {
+      setUpdating(true);
+      
+      // Obtener el token de autenticación
+      const token = localStorage.getItem('authToken');
+      console.log('🔑 Token obtenido:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+      if (!token) {
+        throw new Error('No se encontró token de autenticación. Por favor, inicia sesión nuevamente.');
+      }
+      
+      // Llamar al nuevo endpoint de confirmación de transferencias usando la API configurada
+      console.log('🚀 Llamando a endpoint:', `http://localhost:8000/api/orders/${order.id}/confirm-transfer`);
+      
+      const response = await fetch(`http://localhost:8000/api/orders/${order.id}/confirm-transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al confirmar la transferencia');
+      }
+      
+      const confirmedOrder = await response.json();
+      console.log('✅ Pedido confirmado:', confirmedOrder);
+      
+      // Recargar el pedido
+      await loadOrder();
+      showSuccess(`✅ Transferencia bancaria confirmada exitosamente. ¡Pedido confirmado y email enviado!`);
+      
+      // Limpiar el modal
+      setShowCompleteTransfer(false);
+      setCompleteTransferDate('');
+      setCompleteTransferReference('');
+      setCompleteTransferNotes('');
+      
+    } catch (error) {
+      console.error('Error confirmando transferencia bancaria:', error);
+      showError(`Error al confirmar la transferencia: ${error.message}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   // Nueva función para transferencia parcial
   const handlePartialTransfer = async () => {
     const amount = parseFloat(partialTransferAmount);
@@ -820,6 +872,22 @@ export default function DetallePedido() {
             {(order.payment_method === 'transfer' || !order.payment_method || order.payment_method === 'pending') && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <h3 className="text-lg font-medium text-green-900 mb-3">🏦 Información de Transferencia</h3>
+                
+                {/* Mensaje informativo sobre el nuevo sistema */}
+                {order.payment_method === 'transfer' && order.status === 'pendiente' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <div className="text-sm text-blue-800">
+                      <div className="font-medium mb-1">💡 Nuevo Sistema Automatizado</div>
+                      <div className="text-xs">
+                        Usa el botón <strong>"🏦 Confirmar Transferencia Bancaria"</strong> para:
+                        <br />
+                        • Cambiar automáticamente el estado a "confirmado"
+                        • Enviar email de confirmación al cliente
+                        • Registrar la confirmación con fecha y admin
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-4">                  
                   {/* Mostrar historial de transferencias si existe */}
                   {order.payment_notes && (
@@ -860,6 +928,17 @@ export default function DetallePedido() {
                       >
                         {updating ? 'Procesando...' : '✅ Marcar como Pagado'}
                       </button>
+                      
+                      {/* Botón específico para confirmar transferencias bancarias */}
+                      {order.payment_method === 'transfer' && order.status === 'pendiente' && (
+                        <button
+                          onClick={handleConfirmBankTransfer}
+                          disabled={updating}
+                          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 border-2 border-blue-300"
+                        >
+                          {updating ? 'Procesando...' : '🏦 Confirmar Transferencia Bancaria'}
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setManualPaymentAmount('');
@@ -1297,11 +1376,11 @@ export default function DetallePedido() {
                 Cancelar
               </button>
               <button
-                onClick={handleCompleteTransfer}
+                onClick={handleConfirmBankTransfer}
                 disabled={updating || !completeTransferDate}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300 transition-colors duration-200"
               >
-                {updating ? 'Procesando...' : 'Confirmar Transferencia Completa'}
+                {updating ? 'Procesando...' : '✅ Confirmar Transferencia Bancaria'}
               </button>
             </div>
           </div>

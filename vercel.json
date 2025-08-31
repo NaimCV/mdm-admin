@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    {
+      "source": "/admin/(.*)",
+      "destination": "/admin/$1"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://api-mimosdemadera.railway.app/api/$1",
+      "permanent": false
+    }
+  ]
+}
