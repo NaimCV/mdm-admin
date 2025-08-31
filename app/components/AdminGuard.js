@@ -1,15 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function AdminGuard({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Rutas que no requieren autenticación
+  const publicRoutes = ['/login', '/unauthorized'];
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Si estamos en una ruta pública, no verificar autenticación
+      if (publicRoutes.includes(pathname)) {
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const token = localStorage.getItem('adminToken');
         
@@ -48,7 +59,7 @@ export default function AdminGuard({ children }) {
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, pathname]);
 
   if (isLoading) {
     return (

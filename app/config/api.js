@@ -3,7 +3,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 // Función para obtener el token de autenticación
 const getAuthToken = () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('adminToken');
   }
   return null;
 };
@@ -27,7 +27,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     if (!response.ok) {
       if (response.status === 401) {
         // Token expirado o inválido
-        localStorage.removeItem('authToken');
+        localStorage.removeItem('adminToken');
         window.location.href = '/login';
         return;
       }
