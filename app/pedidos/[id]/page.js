@@ -344,7 +344,7 @@ export default function DetallePedido() {
       setUpdating(true);
       
       // Obtener el token de autenticación
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('adminToken');
       console.log('🔑 Token obtenido:', token ? `${token.substring(0, 20)}...` : 'null');
       
       if (!token) {

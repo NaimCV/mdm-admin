@@ -27,7 +27,7 @@ export default function Categorias() {
       setLoading(true);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/categories`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       
@@ -59,7 +59,7 @@ export default function Categorias() {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: JSON.stringify(categoryData)
         });
@@ -75,7 +75,7 @@ export default function Categorias() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: JSON.stringify(categoryData)
         });
@@ -118,7 +118,7 @@ export default function Categorias() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/categories/${categoryId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           }
         });
         
@@ -141,7 +141,7 @@ export default function Categorias() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/categories/${categoryId}/toggle-status`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       

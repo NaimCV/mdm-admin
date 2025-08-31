@@ -11,7 +11,7 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('adminToken');
         if (token) {
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/me`, {
             headers: {

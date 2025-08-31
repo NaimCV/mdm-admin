@@ -52,7 +52,7 @@ export default function ImageUpload({ onImageUploaded, currentImageUrl = '', pro
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         },
         body: formData
       });

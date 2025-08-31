@@ -56,7 +56,7 @@ export default function BackendImageUpload({
         const response = await fetch(`${API_BASE_URL}/api/products/${productId}/images/multiple`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: formData
         });
@@ -80,7 +80,7 @@ export default function BackendImageUpload({
         const response = await fetch(`${API_BASE_URL}/api/products/${productId}/images`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
           },
           body: formData
         });
@@ -114,7 +114,7 @@ export default function BackendImageUpload({
       const response = await fetch(`${API_BASE_URL}/api/products/${productId}/images/${imageId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
 
@@ -149,7 +149,7 @@ export default function BackendImageUpload({
       const response = await fetch(`${API_BASE_URL}/api/products/${productId}/images/${imageId}/set-primary`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
 
@@ -194,7 +194,7 @@ export default function BackendImageUpload({
       const response = await fetch(`${API_BASE_URL}/api/products/${productId}/images/reorder`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(imageOrders)

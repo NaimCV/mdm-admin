@@ -188,7 +188,7 @@ export default function AdminSidebar({ currentUser, isCollapsed, onToggle }) {
         
         <button 
           onClick={() => {
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('adminToken');
             window.location.href = '/login';
           }}
           className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 ${
