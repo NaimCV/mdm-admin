@@ -26,7 +26,7 @@ export default function Login() {
       const response = await authAPI.login(formData.username, formData.password);
       
       // Guardar token en localStorage
-      localStorage.setItem('authToken', response.access_token);
+      localStorage.setItem('adminToken', response.access_token);
       
       // Redirigir al dashboard
       router.push('/');
