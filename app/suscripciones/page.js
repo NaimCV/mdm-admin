@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 
 export default function EmailSubscriptions() {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -28,7 +29,7 @@ export default function EmailSubscriptions() {
   const loadSubscriptions = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/email-subscriptions`, {
+      const response = await fetch(`${API_BASE_URL}/api/email-subscriptions`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -50,7 +51,7 @@ export default function EmailSubscriptions() {
 
   const loadCount = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/email-subscriptions/count`, {
+      const response = await fetch(`${API_BASE_URL}/api/email-subscriptions/count`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -68,7 +69,7 @@ export default function EmailSubscriptions() {
   const handleDelete = async (subscriptionId) => {
     if (confirm('¿Estás seguro de que quieres eliminar esta suscripción?')) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/email-subscriptions/${subscriptionId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/email-subscriptions/${subscriptionId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('adminToken')}`

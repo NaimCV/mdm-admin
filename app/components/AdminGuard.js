@@ -8,6 +8,7 @@ export default function AdminGuard({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   // Rutas que no requieren autenticación
   const publicRoutes = ['/login', '/unauthorized'];
@@ -30,7 +31,7 @@ export default function AdminGuard({ children }) {
         }
 
         // Verificar token con el backend
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`, {
+        const response = await fetch(`${apiBaseUrl}/api/auth/verify`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

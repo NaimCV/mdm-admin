@@ -28,6 +28,15 @@ export default function AdminSidebar({ currentUser, isCollapsed, onToggle }) {
         { name: 'Buscar Pedido', href: '/pedidos/buscar', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' }
       ]
     },
+    {
+      name: 'Clientes',
+      href: '/clientes',
+      icon: 'M17 20h5v-1a4 4 0 00-5.356-3.772M9 20H4v-1a4 4 0 015.356-3.772M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+      submenu: [
+        { name: 'Lista de Clientes', href: '/clientes', icon: 'M17 20h5v-1a4 4 0 00-5.356-3.772M9 20H4v-1a4 4 0 015.356-3.772M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
+        { name: 'Buscar Cliente', href: '/clientes/buscar', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' }
+      ]
+    },
     { name: 'Usuarios', href: '/usuarios', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z' },
     { name: 'Suscripciones', href: '/suscripciones', icon: 'M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
     { name: 'Contactos', href: '/contactos', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
@@ -66,6 +75,11 @@ export default function AdminSidebar({ currentUser, isCollapsed, onToggle }) {
     if (pathname.startsWith('/pedidos')) {
       setExpandedItems(prev => 
         prev.includes('Pedidos') ? prev : [...prev, 'Pedidos']
+      );
+    }
+    if (pathname.startsWith('/clientes')) {
+      setExpandedItems(prev =>
+        prev.includes('Clientes') ? prev : [...prev, 'Clientes']
       );
     }
     if (pathname.startsWith('/contactos')) {
