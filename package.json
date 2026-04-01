@@ -21,7 +21,7 @@
     "@tiptap/pm": "^3.0.9",
     "@tiptap/react": "^3.0.9",
     "@tiptap/starter-kit": "^3.0.9",
-    "next": "15.4.4",
+    "next": "^15.5.14",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },

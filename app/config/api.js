@@ -153,6 +153,33 @@ export const ordersAPI = {
   },
 };
 
+// Funciones para clientes
+export const customersAPI = {
+  getAll: async (skip = 0, limit = 100) => {
+    return await apiRequest(`/api/customers?skip=${skip}&limit=${limit}`);
+  },
+
+  getByEmail: async (email) => {
+    return await apiRequest(`/api/customers/${encodeURIComponent(email)}`);
+  },
+
+  search: async (query, searchType = 'all', skip = 0, limit = 50) => {
+    const params = new URLSearchParams({
+      query,
+      search_type: searchType,
+      skip: skip.toString(),
+      limit: limit.toString()
+    });
+    return await apiRequest(`/api/customers/search?${params}`);
+  },
+
+  sendVerificationEmail: async (email) => {
+    return await apiRequest(`/api/customers/${encodeURIComponent(email)}/send-verification-email`, {
+      method: 'POST'
+    });
+  },
+};
+
 // Funciones para pagos y reembolsos
 export const paymentsAPI = {
   createRefund: async (refundData) => {

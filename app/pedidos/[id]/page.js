@@ -10,6 +10,7 @@ import AdminLayout from '../../components/AdminLayout';
 import styles from './page.module.css';
 
 export default function DetallePedido() {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState(null);
@@ -352,9 +353,9 @@ export default function DetallePedido() {
       }
       
       // Llamar al nuevo endpoint de confirmación de transferencias usando la API configurada
-              console.log('🚀 Llamando a endpoint:', `${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/confirm-transfer`);
+      console.log('🚀 Llamando a endpoint:', `${API_BASE_URL}/api/orders/${order.id}/confirm-transfer`);
         
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/confirm-transfer`, {
+        const response = await fetch(`${API_BASE_URL}/api/orders/${order.id}/confirm-transfer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
