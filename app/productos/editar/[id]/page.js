@@ -26,6 +26,7 @@ export default function EditarProducto() {
     name: '',
     description: '',
     price: '',
+    use_manual_price: false,
     stock: '',
     category_id: '',
     image_url: '',
@@ -60,6 +61,7 @@ export default function EditarProducto() {
         name: data.name,
         description: data.description,
         price: data.price.toString(),
+        use_manual_price: !(data.production_cost != null && data.profit_margin != null && data.shipping_cost != null),
         stock: data.stock.toString(),
         category_id: data.category_id ? data.category_id.toString() : '',
         image_url: data.image_url || '',
@@ -119,21 +121,19 @@ export default function EditarProducto() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Si cambian los campos de costes, recalcular el precio automáticamente
-    if (['production_cost', 'profit_margin', 'shipping_cost'].includes(name)) {
-      const newFormData = { ...formData, [name]: value };
-      const calculatedPrice = calculateRecommendedPrice(newFormData);
-      setFormData(prev => ({
+    setFormData(prev => {
+      const newFormData = {
         ...prev,
-        [name]: value,
-        price: calculatedPrice.toFixed(2)
-      }));
-    }
+        [name]: value
+      };
+
+      if (!newFormData.use_manual_price && ['production_cost', 'profit_margin', 'shipping_cost'].includes(name)) {
+        const calculatedPrice = calculateRecommendedPrice(newFormData);
+        newFormData.price = calculatedPrice > 0 ? calculatedPrice.toFixed(2) : '';
+      }
+
+      return newFormData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -142,8 +142,8 @@ export default function EditarProducto() {
       setSaving(true);
       const productData = {
         ...formData,
-        // NO enviar el precio - el backend lo calculará automáticamente
-        // price: parseFloat(formData.price),
+        price: formData.price ? parseFloat(formData.price) : null,
+        use_manual_price: formData.use_manual_price,
         stock: parseInt(formData.stock),
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         show_without_stock: formData.show_without_stock,
@@ -325,24 +325,52 @@ export default function EditarProducto() {
               </div>
               
               <div>
+                <label className="flex items-center mb-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.use_manual_price}
+                    onChange={(e) => setFormData(prev => {
+                      const checked = e.target.checked;
+                      const recommendedPrice = calculateRecommendedPrice(prev);
+                      return {
+                        ...prev,
+                        use_manual_price: checked,
+                        price: checked
+                          ? prev.price
+                          : (recommendedPrice > 0 ? recommendedPrice.toFixed(2) : prev.price)
+                      };
+                    })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Introducir precio manualmente
+                  </span>
+                </label>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Precio * (se calcula automáticamente)
+                  Precio * {formData.use_manual_price ? '(manual)' : '(automático)'}
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   required
                   value={formData.price}
-                  readOnly
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-gray-600 cursor-not-allowed"
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  readOnly={!formData.use_manual_price}
+                  className={`w-full border border-gray-300 rounded-md px-3 py-2 ${
+                    formData.use_manual_price
+                      ? 'focus:outline-none focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-gray-50 text-gray-600 cursor-not-allowed'
+                  }`}
                 />
                 <div className="mt-2 text-xs text-gray-600 space-y-1">
                   <p>💰 Precio base (sin IVA): {formData.price}€</p>
                   <p>🧮 Precio con IVA (21%): {product?.price_with_iva ? product.price_with_iva.toFixed(2) : (parseFloat(formData.price || 0) * 1.21).toFixed(2)}€</p>
-                  <p>✅ El precio con IVA termina en .00 o .05</p>
+                  {!formData.use_manual_price && <p>✅ El precio con IVA termina en .00 o .05</p>}
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  El precio se calcula automáticamente basándose en el coste de producción, margen de beneficio y coste de envío
+                  {formData.use_manual_price
+                    ? 'Puedes fijar el precio base manualmente.'
+                    : 'El precio se calcula automáticamente basándose en el coste de producción, margen de beneficio y coste de envío'}
                 </p>
               </div>
               
@@ -512,7 +540,7 @@ export default function EditarProducto() {
                 </div>
 
                 {/* Precio Recomendado Calculado */}
-                {formData.production_cost && (
+                {!formData.use_manual_price && formData.production_cost && (
                   <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <h3 className="text-sm font-medium text-green-900 mb-2">💰 Precio Recomendado Calculado</h3>
                     <div className="text-lg font-semibold text-green-700">
