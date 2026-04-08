@@ -19,6 +19,7 @@ export default function CrearProducto() {
     name: '',
     description: '',
     price: '',
+    use_manual_price: false,
     stock: '',
     category_id: '',
     image_url: '',
@@ -59,10 +60,19 @@ export default function CrearProducto() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+    setFormData(prevState => {
+      const newFormData = {
+        ...prevState,
+        [name]: value
+      };
+
+      if (!newFormData.use_manual_price && ['production_cost', 'profit_margin', 'shipping_cost'].includes(name)) {
+        const calculatedPrice = calculateRecommendedPrice(newFormData);
+        newFormData.price = calculatedPrice > 0 ? calculatedPrice.toFixed(2) : '';
+      }
+
+      return newFormData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -72,6 +82,7 @@ export default function CrearProducto() {
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
+        use_manual_price: formData.use_manual_price,
         stock: parseInt(formData.stock),
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         show_without_stock: formData.show_without_stock,
@@ -98,11 +109,29 @@ export default function CrearProducto() {
     }
   };
 
-  const calculateRecommendedPrice = () => {
-    const cost = parseFloat(formData.production_cost) || 0;
-    const shipping = parseFloat(formData.shipping_cost) || 0;
-    const margin = parseFloat(formData.profit_margin) || 30.0;
-    return cost + shipping + (cost * (margin / 100));
+  const roundUsingTaxes = (priceWithoutTaxes, tax = 0.21) => {
+    priceWithoutTaxes = Math.round(priceWithoutTaxes * 100) / 100;
+    const price = priceWithoutTaxes * (1 + tax);
+    const lastDecimalDigit = price.toFixed(2).slice(-1);
+
+    if (lastDecimalDigit === "0" || lastDecimalDigit === "5") {
+      return priceWithoutTaxes;
+    }
+
+    return roundUsingTaxes(priceWithoutTaxes + 0.01, tax);
+  };
+
+  const calculateRecommendedPrice = (data = formData) => {
+    const productionCost = parseFloat(data.production_cost || 0);
+    const shippingCost = parseFloat(data.shipping_cost || 0);
+    const margin = parseFloat(data.profit_margin || 30.0);
+    const basePrice = productionCost + (productionCost * margin / 100) + shippingCost;
+
+    if (basePrice <= 0) {
+      return 0;
+    }
+
+    return roundUsingTaxes(basePrice, 0.21);
   };
 
   return (
@@ -178,8 +207,29 @@ export default function CrearProducto() {
               </div>
               
               <div>
+                <label className="flex items-center mb-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.use_manual_price}
+                    onChange={(e) => setFormData(prev => {
+                      const checked = e.target.checked;
+                      const recommendedPrice = calculateRecommendedPrice(prev);
+                      return {
+                        ...prev,
+                        use_manual_price: checked,
+                        price: checked
+                          ? prev.price
+                          : (recommendedPrice > 0 ? recommendedPrice.toFixed(2) : prev.price)
+                      };
+                    })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Introducir precio manualmente
+                  </span>
+                </label>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Precio *
+                  Precio * {formData.use_manual_price ? '(manual)' : '(automático)'}
                 </label>
                 <input
                   type="number"
@@ -187,12 +237,15 @@ export default function CrearProducto() {
                   required
                   value={formData.price}
                   onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  readOnly={!formData.use_manual_price}
+                  className={`w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    formData.use_manual_price ? '' : 'bg-gray-50 text-gray-600 cursor-not-allowed'
+                  }`}
                 />
                 <div className="mt-2 text-xs text-gray-600 space-y-1">
                   <p>💰 Precio base (sin IVA): {formData.price || '0.00'}€</p>
                   <p>🧮 Precio con IVA (21%): {(parseFloat(formData.price || 0) * 1.21).toFixed(2)}€</p>
-                  <p>✅ El precio con IVA termina en .00 o .05</p>
+                  {!formData.use_manual_price && <p>✅ El precio con IVA termina en .00 o .05</p>}
                 </div>
               </div>
               
@@ -361,7 +414,7 @@ export default function CrearProducto() {
                   </div>
 
                   {/* Precio Recomendado Calculado */}
-                  {formData.production_cost && (
+                  {!formData.use_manual_price && formData.production_cost && (
                     <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                       <h3 className="text-sm font-medium text-green-900 mb-2">💰 Precio Recomendado Calculado</h3>
                       <div className="text-lg font-semibold text-green-700">
